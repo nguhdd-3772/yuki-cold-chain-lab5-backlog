@@ -1,0 +1,58 @@
+# Sprint 1 GIẢ LẬP — nguồn duy nhất cho progress-report.md, burndown SVG và Status/Iteration trên Project.
+# Ngày làm việc: 2026-11-30 (T2) … 2026-12-11 (T6) = 10 ngày. day = số thứ tự ngày làm việc (1..10).
+# end: Done | In review | In progress | Blocked. done_day: ngày chuyển Done (chỉ với Done).
+# left_h: giờ còn lại cuối sprint (việc chưa xong). note: diễn biến giả lập (không phải dữ kiện thật).
+iteration: Sprint 1
+start: 2026-11-30
+end_date: 2026-12-11
+workdays: [2026-11-30, 2026-12-01, 2026-12-02, 2026-12-03, 2026-12-04, 2026-12-07, 2026-12-08, 2026-12-09, 2026-12-10, 2026-12-11]
+goal: >-
+  Nền tảng chung (mã lỗi, phân quyền, khung chính sách) + kiểm nhập chạy được transaction thật,
+  gửi hết câu hỏi khách đang chặn, chốt cách hiểu luật giờ lái (spike) trước khi code kiểm kỳ.
+capacity_note: >-
+  Nhân sự P2 theo LAB-1 (BE 3,3 · FE 2,5 · QA 2,4 · TL 0,2 · BrSE 0,4 · UI 0,3 · Infra 0,3 người) = 9,4 người
+  × 10 ngày × 8h ≈ 752h giờ ước lượng / sprint (1 MD = 8h như LAB-1). Sprint đầu đặt trần cam kết 56h / người
+  (70%) để chừa dựng môi trường, onboarding. PM, Infra không nhận issue ở sprint này.
+items:
+  # ── Câu hỏi khách (BrSE gửi ngày 1, chờ trả lời) ──
+  - {key: E01-03a, end: Done, done_day: 4, note: "Khách trả lời: giữ phân quyền dải nhiệt trong P1 (khớp PREMISE S6)"}
+  - {key: E01-08, end: Done, done_day: 5}
+  - {key: E02-04, end: Done, done_day: 3}
+  - {key: E02-05, end: Done, done_day: 6}
+  - {key: E04-07, end: Done, done_day: 7}
+  - {key: E04-08, end: Blocked, left_h: 1, note: "Q12 (分納 hay tách đơn) khách chưa trả lời; nhắc lần 2 ngày 8"}
+  - {key: E05-08, end: Done, done_day: 4}
+  - {key: E06-02, end: Blocked, left_h: 1, note: "Q5 khách chưa trả lời đủ: mới chốt kỳ năm tài chính, còn mốc khối 2 tuần"}
+  - {key: E06-03, end: Done, done_day: 8, note: "Khách xác nhận không có số dư đầu kỳ; năm tài chính đầu tính từ go-live (khớp A1)"}
+  - {key: E07-10, end: Done, done_day: 5}
+  - {key: E10-05, end: Done, done_day: 6}
+  # ── Spike giờ lái ──
+  - {key: E06-01, end: Done, done_day: 3, note: "Spike xong (giả lập): lập bảng 4 điểm cách hiểu LAB-4; 2 điểm cần khách / chuyên gia lao động xác nhận → gộp vào Q5 (E06-02). Chưa đổi cách hiểu, A2 giữ nguyên"}
+  # ── BE-1: nền tảng ──
+  - {key: E01-01a, end: Done, done_day: 3}
+  - {key: E01-02a, end: Done, done_day: 5}
+  - {key: E01-02b, end: Done, done_day: 6}
+  - {key: E01-05a, end: Done, done_day: 9}
+  # ── BE-2: nền tảng + giờ lái ──
+  - {key: E01-04, end: Done, done_day: 2}
+  - {key: E01-06, end: Done, done_day: 3}
+  - {key: E06-04, end: Done, done_day: 9, note: "Chờ E01-05a (khung chính sách) xong ngày 9 mới nối được"}
+  - {key: E06-05, end: Done, done_day: 7}
+  - {key: E06-06a, end: In progress, left_h: 6, note: "Quy tắc 休息 với ca trước cần dữ liệu ngày D-1; làm tiếp Sprint 2"}
+  # ── BE-3: kiểm nhập ──
+  - {key: E02-01a, end: Done, done_day: 4}
+  - {key: E02-01b, end: Done, done_day: 5}
+  - {key: E02-01c, end: Done, done_day: 8}
+  - {key: E02-01d, end: In review, left_h: 2}
+  # ── FE ──
+  - {key: E01-01b, end: Done, done_day: 3}
+  - {key: E01-07, end: Done, done_day: 8}
+  - {key: E02-02a, end: Done, done_day: 9}
+  - {key: E02-02b, end: In progress, left_h: 9, note: "Máy HT thật chưa về; camera điện thoại đọc GS1-128 chập chờn"}
+  - {key: E05-04a, end: Done, done_day: 6}
+  - {key: E05-04d, end: In review, left_h: 3}
+  # ── QA ──
+  - {key: E01-02c, end: Done, done_day: 10}
+  - {key: E02-03, end: In progress, left_h: 5, note: "Chờ E02-01d review xong mới chạy lại"}
+  - {key: E06-12b, end: Done, done_day: 6, note: "Seed 佐藤 đổi tài xế tuyến RT-0911-03 (PREMISE S4)"}
+  - {key: E06-12a, end: In progress, left_h: 7, note: "Bảng ca biên phần ngày xong; phần kỳ chờ Q5"}

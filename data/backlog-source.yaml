@@ -1,0 +1,554 @@
+# Nguồn backlog duy nhất của LAB-5 (Product B, Yuki Cold Chain WMS/TMS).
+# Mọi bảng trong md và mọi issue trên GitHub Project sinh từ file này bằng script, không gõ tay.
+#
+# Quy ước:
+#   epic.lab1     : mã task LAB-1 (06-estimate-wbs JSON) mà epic thay thế, dùng cho estimate.md mục 5.
+#   issue.code_h  : giờ viết code thuần của issue lá (người ước). Giờ ước lượng = code_h × (1 + hệ số) theo meta.estimate_rule
+#                   (unit test, tích hợp, review + sửa sau review), làm tròn lên giờ nguyên. Issue cha = tổng con.
+#   issue.pure    : true = module thuần không đụng DB / API (không cộng hệ số tích hợp).
+#   issue.hours_override : giờ chốt tay khi quy tắc không hợp, bắt buộc kèm override_why.
+#   issue thô (kind: coarse): chưa có spec LAB-4, giờ = tổng MD LAB-1 × 8 (script tính từ lab1), chưa được kéo vào sprint.
+#   refs          : mã LAB-4 (SPEC/TECH/API/DB/ADR/G-xx/Q-xx/P-xx) hoặc LAB-1 (F/S/US). "cấm bịa": không có ref thì không có issue.
+#   kind          : feat (làm mới / port từ prototype) · gap (sửa chỗ prototype ≠ thiết kế) · test · clarify (hỏi khách) · spike · coarse
+#   owner         : người phụ trách giả định, theo đội hình P2 của LAB-1 (06-estimate-wbs mục 3).
+
+meta:
+  project: Yuki Cold Chain WMS/TMS — backlog P2
+  source_lab4: lab-4-design/specs (nộp 2026-11-11, bản sau PL review vòng 7)
+  md_hours: 8
+  max_leaf_hours: 24     # issue lá > 24h phải tách sub-issue (trừ issue thô)
+  # Quy tắc ra giờ theo định nghĩa xong (PL chọn 2026-11-11): code + unit test + tích hợp + review và sửa sau review.
+  estimate_rule:
+    be:       {test: 0.40, integ: 0.20, review: 0.15}   # BE có DB / migration / API
+    be_pure:  {test: 0.40, integ: 0.00, review: 0.15}   # BE module quy tắc thuần (ADR-003)
+    fe:       {test: 0.20, integ: 0.30, review: 0.15}   # FE màn hình gọi API: nối API, trạng thái lỗi M_xx, loading
+    fe_pure:  {test: 0.20, integ: 0.00, review: 0.15}   # FE không gọi API
+    test:     {rerun: 0.25}                              # QA: chạy lại sau khi dev sửa lỗi
+    clarify:  {}                                         # hỏi khách: giờ BrSE soạn câu hỏi + ghi kết quả
+    spike:    {}
+  owners: [PM, BrSE, TL, BE-1, BE-2, BE-3, FE-1, FE-2, FE-3, QA-1, QA-2, Infra]
+
+# Task LAB-1 không thuộc backlog P2 (estimate.md mục 5 vẫn liệt kê để so).
+lab1_outside_backlog:
+  - {ids: [N1.*], why: 'Thiết kế cơ bản P1 — giai đoạn P1 (2026-10-05 → 11-27) đã kết thúc, kết quả là bộ spec LAB-4 (10 màn hình ★, kiến trúc, DB, API); thiết kế 49 màn hình còn lại nằm trong phần design 48 MD của issue thô (PREMISE S5)'}
+  - {ids: [N3.*], why: "Onboarding, họp tuần, demo, steering — overhead quản lý, theo dõi ngoài backlog sản phẩm"}
+  - {ids: [N4.15, N4.16, N4.17], why: "Hỗ trợ UAT, sửa lỗi UAT, gói nghiệm thu — thuộc P3, lập backlog khi vào P3"}
+  - {ids: [N5.*, N6.*, N7.*], why: "Diễn tập chuyển đổi, cutover, đào tạo — thuộc P3/P4"}
+  - {ids: [M.*], why: "PM/BrSE/TL overhead và dự phòng 20% — không chia thành issue; dự phòng dùng khi Q chưa trả lời làm phình issue"}
+
+epics:
+  # ───────────────────────── Phần đã có spec LAB-4: break chi tiết ─────────────────────────
+  - key: E01
+    title: Nền tảng chung — mã lỗi, phân quyền, audit, chính sách có phiên bản
+    refs: [api-conventions, error-codes, common-spec, ADR-002, ADR-003, ADR-005, ADR-007, ADR-011]
+    lab1: [L1.1, L1.2, L1.3, L1.7, L1.10]
+    issues:
+      - key: E01-01
+        title: Chuẩn hóa response lỗi có mã M_xx cho mọi API
+        kind: gap
+        refs: [G-14, api-conventions, error-codes]
+        desc: Prototype chỉ trả chuỗi `error`, lỗi 500 nối nguyên chuỗi lỗi DB. Thiết kế yêu cầu mọi response lỗi có `error_code` M_xx (101 mã ở error-codes.md) và 500 không lộ chi tiết DB.
+        subs:
+          - {key: E01-01a, title: Handler lỗi chung trả error_code M_xx, 500 che chi tiết DB, kind: gap, refs: [G-14], owner: BE-1, code_h: 8,
+             desc: "Một hàm bọc Route Handler: map lỗi nghiệp vụ → {error_code, message}, lỗi không lường trước → 500 M_06 kèm request_id.",
+             ac: ["Mọi lỗi 4xx có error_code thuộc error-codes.md", "500 không chứa chuỗi lỗi Postgres", "Unit test cho 3 loại lỗi"]}
+          - {key: E01-01b, pure: true, title: Hằng số M_xx và thông báo tiếng Nhật dùng chung FE/BE, kind: feat, refs: [error-codes], owner: FE-1, code_h: 6,
+             desc: "Sinh file hằng số từ bảng error-codes.md (101 mã) để FE hiện đúng câu thông báo theo mã.",
+             ac: ["Không còn chuỗi thông báo gõ tay trong component", "Script kiểm mã trong code ⊂ bảng"]}
+          - {key: E01-01c, title: Áp mã M_xx vào 35 API hiện có và test hợp đồng response, kind: gap, refs: [G-14, api-list], owner: BE-2, code_h: 12,
+             desc: "Sửa 35 API trong api-list.md dùng handler chung; test hợp đồng kiểm shape lỗi.",
+             ac: ["35/35 API trả error_code khi lỗi", "Test hợp đồng chạy trong CI"]}
+      - key: E01-02
+        title: Một nguồn phân quyền vai trò × màn hình cho page và API
+        kind: gap
+        refs: [ADR-005, G-25, G-09, Q7]
+        desc: Quyền lấy từ role-permissions.ts (ADR-005). Còn lệch so với LAB-1 ở trang gộp (S-RT-02/03, S-TP-02/03) và R03 trên S-SH-02 (G-25); vai trò DEMO phải bị loại khỏi production (G-09).
+        subs:
+          - {key: E01-02a, title: Tách quyền theo đúng mã màn hình LAB-1 cho các trang gộp, kind: gap, refs: [G-25], owner: BE-1, code_h: 6,
+             desc: "Trang gộp S-RT-02/03 và S-TP-02/03 kiểm quyền theo từng tab/mã màn hình; R03 trên S-SH-02 giữ theo US-14 nếu khách chấp nhận (Q7).",
+             ac: ["R09 không thấy S-RT-02, R10 không thấy S-RT-03 (theo LAB-1)", "API trả 403 đúng như page"]}
+          - {key: E01-02b, title: Loại vai trò DEMO khỏi build production, kind: gap, refs: [G-09], owner: BE-1, code_h: 2,
+             desc: "Migration 004 tạo vai trò DEMO chỉ chạy ở môi trường demo.",
+             ac: ["Production không có profile role DEMO", "Seed demo vẫn chạy"]}
+          - {key: E01-02c, title: Test ma trận 11 vai trò × trang × API sinh từ role-permissions, kind: test, refs: [ADR-005], owner: QA-1, code_h: 6,
+             desc: "Test tự sinh: mỗi vai trò R01–R11 × mỗi trang/API → 200 hoặc 403 đúng bảng.",
+             ac: ["Bảng kết quả 11 × N khớp 04-screen-list LAB-1", "Chạy trong CI"]}
+      - key: E01-03
+        title: Phân quyền vai trò × dải nhiệt (cam kết LAB-1 bị lùi từ LAB-4)
+        kind: feat
+        refs: [Q10, P-10, ADR-002, PREMISE-LAB4-2]
+        desc: LAB-1 hứa quyền theo vai trò × dải nhiệt (Q-B12); LAB-4 lùi sang LAB-5. Thiết kế lọc ở tầng API (RLS khóa, mọi truy cập qua server). Chỉ làm khi khách giữ yêu cầu (Q10).
+        subs:
+          - {key: E01-03a, title: "[Hỏi khách] Q10 — giữ phân quyền × dải nhiệt trong P1 hay lùi", kind: clarify, refs: [Q10], owner: BrSE, code_h: 2,
+             desc: "Báo lại khách thay đổi so với proposal, xin quyết định trước khi chốt P1.",
+             ac: ["Có câu trả lời ghi vào Q&A list", "Cập nhật PREMISE nếu khách đổi"]}
+          - {key: E01-03b, title: Cột phạm vi dải nhiệt trên profile + helper lọc dùng chung, kind: feat, refs: [Q10, ADR-002], owner: BE-1, code_h: 8,
+             desc: "Thêm profiles.temp_band_scope (migration) và helper lọc / kiểm quyền theo dải.",
+             ac: ["Unit test helper đủ 3 dải × đọc / ghi"]}
+          - {key: E01-03d, title: Áp helper lọc dải nhiệt vào API kho / nhập / nhiệt độ, kind: feat, refs: [Q10, API-RC-02, API-IV-03, API-TP-02], owner: BE-1, code_h: 8,
+             desc: "Áp cho API-RC-*, API-IV-*, API-TP-*.",
+             ac: ["Người chỉ có CHILLED không đọc / ghi lô FROZEN (403)"]}
+          - {key: E01-03c, title: Test quyền dải nhiệt ở các API kho / nhập / nhiệt, kind: test, refs: [Q10], owner: QA-1, code_h: 6,
+             desc: "Ca đọc / ghi chéo dải cho 3 nhóm API.", ac: ["Mọi ca chéo dải bị chặn"]}
+      - {key: E01-04, title: Audit log thêm request_id và device_id, kind: gap, refs: [G-16, L1.7], owner: BE-2, code_h: 6,
+         desc: "audit_log thiếu correlation ID và thiết bị (NFR-OPS-01). Thêm cột + truyền từ header.",
+         ac: ["Mọi bản ghi audit mới có request_id", "Thao tác từ thiết bị cửa kho có device_id"]}
+      - key: E01-05
+        title: Khung chính sách có phiên bản + ngày hiệu lực, snapshot vào giao dịch
+        kind: gap
+        refs: [ADR-007, G-03, API-MS-06]
+        desc: temp_bands chỉ 1 phiên bản (G-03). Cần bảng chính sách có policy_version + effective_from, kích hoạt phiên bản tương lai, snapshot vào tuyến / cảnh báo, không áp hồi tố. Dùng chung cho ngưỡng nhiệt và bộ quy tắc giờ lái.
+        subs:
+          - {key: E01-05a, title: Bảng policy_versions và helper lấy phiên bản hiệu lực theo ngày, kind: gap, refs: [G-03, ADR-007], owner: BE-1, code_h: 10,
+             desc: "Migration + hàm getPolicy(kind, at) trả phiên bản hiệu lực; giao dịch lưu policy_version đã dùng.",
+             ac: ["Đổi phiên bản tương lai không ảnh hưởng giao dịch cũ", "Unit test biên effective_from"]}
+          - {key: E01-05b, title: "API-MS-06 đọc / tạo phiên bản chính sách (tạo đề xuất duyệt)", kind: feat, refs: [API-MS-06, ADR-007], owner: BE-1, code_h: 8,
+             desc: "GET danh sách phiên bản; POST tạo phiên bản mới → approval (二者承認).",
+             ac: ["Người đề xuất không tự kích hoạt", "Phiên bản quá khứ không sửa được"]}
+      - {key: E01-06, title: Đồng hồ nghiệp vụ — production JST, demo ngày cố định, kind: gap, refs: [G-11, ADR-011], owner: BE-2, code_h: 4,
+         desc: "business_date cố định 2026-09-10 trong app_settings. Production lấy ngày JST; demo giữ cờ cấu hình.",
+         ac: ["Một hàm businessDate() dùng ở mọi quy tắc ngày", "Test đổi múi giờ server"]}
+      - {key: E01-07, title: Khung UI chung theo common-spec (layout, banner M_xx, hộp xác nhận), kind: feat, refs: [common-spec, L1.10], owner: FE-1, code_h: 12,
+         desc: "Layout, header theo vai trò, banner lỗi theo mã M_xx, hộp xác nhận và nhập lý do dùng chung cho 10 màn hình spec.",
+         ac: ["10 màn hình LAB-4 dùng chung component", "Hiển thị tiếng Nhật, giờ JST"]}
+      - {key: E01-08, title: "[Hỏi khách] Q7 — danh sách vai trò chính thức và chấp nhận lệch quyền G-25", kind: clarify, refs: [Q7, G-25], owner: BrSE, code_h: 2,
+         desc: "Xác nhận R01–R11 và các lệch quyền đã khai.", ac: ["Có câu trả lời ghi Q&A list"]}
+
+  - key: E02
+    title: Nhập hàng và kiểm hàng (入荷検品)
+    refs: [S-RC-02, RECV_INSPECT_TECH, API-RC-02, YUKI_INVENTORY_DB]
+    lab1: [L2.1, L2.4, S.15]
+    issues:
+      - key: E02-01
+        title: API-RC-02 xác nhận kiểm 1 dòng nhập
+        kind: feat
+        refs: [API-RC-02, RECV_INSPECT_TECH]
+        desc: Port API từ prototype và bổ sung transaction, loại hạn trên lô, nhánh HELD theo RECV_INSPECT_TECH 4.1–4.6.
+        subs:
+          - {key: E02-01a, title: Hàm Postgres confirm_receiving_line() trong 1 transaction + sequence mã, kind: gap, refs: [G-15, ADR-004], owner: BE-3, code_h: 10,
+             desc: "Prototype ghi receipt_lines rồi lots không cùng transaction; mã đơn sinh bằng count+1001. Chuyển vào hàm Postgres, dùng sequence.",
+             ac: ["Lỗi giữa chừng không để lại dòng mồ côi", "Hai request song song không trùng mã"]}
+          - {key: E02-01b, title: Lưu expiry_type trên lô lúc nhập (không áp hồi tố khi đổi master), kind: gap, refs: [G-01, DR-MST-01], owner: BE-3, code_h: 4,
+             desc: "Copy expiry_type từ SKU master vào lots khi tạo lô.", ac: ["Đổi loại hạn SKU không đổi lô đang tồn", "Migration điền dữ liệu cũ"]}
+          - {key: E02-01c, title: "Nhánh 受入保留 HELD: ghi dòng HELD + deviation, không tạo lô", kind: gap, refs: [G-24, P-13, M_RC_10], owner: BE-3, code_h: 8,
+             desc: "Dòng bị chặn (lệch dải xe, thiếu mã truy xuất gạo / bò) phải để lại receipt_lines.result = HELD + lý do + deviation.",
+             ac: ["Trả M_RC_10, có bản ghi HELD", "Không tạo lô"]}
+          - {key: E02-01d, title: Idempotent client_request_id + unit test bộ quy tắc inspectReceivingLine, kind: test, refs: [B11, US-02, US-05], owner: BE-3, code_h: 6,
+             desc: "Ca: thiếu trường P0, loại hạn nhãn ≠ master, nhiệt ngoài ngưỡng → tự cách ly -Q, gửi lại cùng client_request_id.",
+             ac: ["Gửi lại không tạo lô thứ 2", "Mỗi trường P0 thiếu được liệt kê"]}
+      - key: E02-02
+        title: Màn hình S-RC-02 入荷検品 (thiết bị cửa kho)
+        kind: feat
+        refs: [S-RC-02]
+        desc: Màn hình HT theo spec S-RC-02 mục 4 (field, validation, trạng thái, quyền R01).
+        subs:
+          - {key: E02-02a, title: Form kiểm dòng nhập + validation theo spec, kind: feat, refs: [S-RC-02], owner: FE-2, code_h: 12,
+             desc: "Field số lượng, lô, ngày SX, hạn, loại hạn, nhiệt thực đo; lỗi theo mã M_RC.", ac: ["Khớp mục 4.1 của spec", "Chữ lớn, thao tác 1 tay"]}
+          - {key: E02-02b, title: Quét mã GS1-128 bằng camera / HT, kind: gap, refs: [G-18, FR-OUT-04], owner: FE-2, code_h: 12,
+             desc: "Prototype chọn / gõ thay quét. Đọc GS1-128 (AI 01, 10, 11, 17) điền form.", ac: ["Đọc được nhãn mẫu", "Quét sai báo lỗi, không điền bậy"]}
+          - {key: E02-02c, title: Hiển thị kết quả HELD / cách ly và thông báo M_RC, kind: feat, refs: [S-RC-02, G-24], owner: FE-2, code_h: 4,
+             desc: "Hiện trạng thái dòng sau xác nhận.", ac: ["HELD và QUARANTINE phân biệt rõ"]}
+      - {key: E02-03, title: Test kiểm nhập — biên nhiệt độ, thiếu trường, gạo / bò, kind: test, refs: [S-RC-02, B5, B8, B11], owner: QA-1, code_h: 10,
+         desc: "Ca biên 5,0 / 5,1°C, thiếu từng trường P0, mã cá thể bò 9 / 10 / 11 số, gạo thiếu xuất xứ.", ac: ["Ca test truy về mã BR/FR"]}
+      - {key: E02-04, title: "[Hỏi khách] Q8 — nhập thiếu mã truy xuất: chặn hay nhận và cách ly", kind: clarify, refs: [Q8, P-13], owner: BrSE, code_h: 1,
+         desc: "RFP mâu thuẫn BR-TRACE vs FR-REC-05; thiết kế đang chặn (P-13).", ac: ["Có câu trả lời"]}
+      - {key: E02-05, title: "[Hỏi khách] Q9 — 米加工品 có thuộc 米トレーサビリティ法 không", kind: clarify, refs: [Q9, P-15], owner: BrSE, code_h: 1,
+         desc: "Lane truy xuất SKU lấy theo master; cần khách xác nhận.", ac: ["Có câu trả lời"]}
+
+  - key: E03
+    title: Tồn kho và trạng thái chất lượng (品質ステータス)
+    refs: [S-IV-04, API-IV-02, API-IV-03, YUKI_INVENTORY_DB]
+    lab1: [L2.2, S.20]
+    issues:
+      - key: E03-01
+        title: Máy trạng thái chất lượng theo bảng chuyển S-IV-04 mục 6
+        kind: gap
+        refs: [G-19, G-20, P-07, FR-INV-05]
+        desc: Thêm HOLD theo Hình 11 RFP; sửa các lỗi chuyển trạng thái khi mở / đóng case.
+        subs:
+          - {key: E03-01a, title: Bảng chuyển trạng thái duy nhất + API-IV-03 kiểm thứ tự và lý do, kind: gap, refs: [G-19, API-IV-03], owner: BE-1, code_h: 8,
+             desc: "Thêm QUARANTINE→HOLD, HOLD→DISPOSED; mọi chuyển phải có lý do.", ac: ["Chuyển ngoài bảng trả lỗi M_IV", "Unit test đủ cặp"]}
+          - {key: E03-01b, title: Ghi from_status khi mở case; RELEASE trả về đúng trạng thái cũ; tự cách ly giải phóng giữ chỗ, kind: gap, refs: [G-20], owner: BE-1, code_h: 10,
+             desc: "Prototype đổi HOLD thành QUARANTINE và đóng case đưa mọi lô về AVAILABLE.", ac: ["Lô HOLD về HOLD sau RELEASE", "Lô bị cách ly mất giữ chỗ"]}
+      - {key: E03-02, title: Màn hình S-IV-04 品質ステータス管理, kind: feat, refs: [S-IV-04], owner: FE-1, code_h: 12,
+         desc: "Danh sách lô theo trạng thái, lịch sử sự kiện, thao tác chuyển có lý do (R04).", ac: ["Khớp mục 4.1 của spec", "Nút chỉ hiện chuyển hợp lệ"]}
+      - {key: E03-03, title: Sửa seed — lô thuộc case sai lệch đang mở luôn QUARANTINE, kind: gap, refs: [G-22], owner: BE-1, code_h: 2,
+         desc: "2 lô FRO-002 của case #1 vẫn AVAILABLE nên vẫn được phân bổ.", ac: ["Seed mới không phân bổ được 2 lô này"]}
+      - {key: E03-04, title: Test trạng thái chất lượng và liên kết case, kind: test, refs: [S-IV-04, G-19, G-20], owner: QA-1, code_h: 6,
+         desc: "Ca chuyển hợp lệ / không hợp lệ, mở / đóng case với lô HOLD.", ac: ["Ca test truy về FR-INV-05"]}
+
+  - key: E04
+    title: Phân bổ và quy tắc hạn dùng (消費期限 / 1/3 / 日付逆転 / FEFO)
+    refs: [S-OD-04, ALLOC_RUN_TECH, API-OD-03, API-OD-04, ADR-006, YUKI_ORDER_DB]
+    lab1: [L3.1, L3.2, L3.3, L3.4, L3.5, S.28]
+    issues:
+      - key: E04-01
+        title: Bộ quy tắc runAllocation (module TypeScript thuần)
+        kind: feat
+        refs: [ADR-003, B1, B3, B4, US-08, US-09, US-11]
+        desc: Thứ tự loại trừ cố định 消費期限 → dải nhiệt → cách ly → cửa sổ giao → 日付逆転 → FEFO / FIFO, trả lý do loại từng lô.
+        subs:
+          - {key: E04-01a, pure: true, title: Thứ tự loại trừ + FEFO / FIFO + reason_code từng dòng, kind: feat, refs: [B4, FR-OUT-02, BR-FEFO-01], owner: BE-1, code_h: 10,
+             desc: "Port từ prototype, thêm lines[].reason_code cho API-OD-03.", ac: ["Lô bị loại có đúng 1 lý do đầu tiên", "Cùng hạn → received_at tăng"]}
+          - {key: E04-01b, pure: true, title: "Cửa sổ giao 1/3・1/2 theo thỏa thuận khách × SKU, null → BUSINESS_REVIEW", kind: feat, refs: [B3, P-05, BR-DELWIN-01], owner: BE-1, code_h: 6,
+             desc: "allowed = floor((expiry − mfg) × ratio); không tự áp 1/3 khi thiếu thỏa thuận.", ac: ["Ca biên làm tròn xuống", "Thỏa thuận null → BUSINESS_REVIEW"]}
+          - {key: E04-01c, title: Unit test bộ ca RFP + biên (bằng ngày, cùng hạn, 賞味 vs 消費), kind: test, refs: [B1, B4, US-08], owner: BE-1, code_h: 8,
+             desc: "Bảng ca test cho từng bước loại trừ.", ac: ["Ca 消費期限 = ngày giao bị chặn", "賞味期限 quá hạn chỉ cảnh báo"]}
+      - key: E04-02
+        title: 日付逆転禁止 — căn cứ đúng theo lịch sử từng khách × SKU
+        kind: gap
+        refs: [B2, ADR-006, BR-DATE-01, US-10]
+        desc: Căn cứ = hạn lớn nhất của lần giao ACCEPTED gần nhất cùng khách × SKU, cộng allocation đã giữ chỗ / đã xuất xe chưa giao; không so với hôm nay.
+        subs:
+          - {key: E04-02a, title: Căn cứ = max(expiry) của lần giao ACCEPTED gần nhất, kind: gap, refs: [G-21], owner: BE-1, code_h: 6,
+             desc: "Prototype lấy 1 dòng mới nhất bằng limit 1 → chọn ngẫu nhiên khi 1 lần giao nhiều lô.", ac: ["Lần giao 2 lô dùng hạn lớn hơn", "REJECTED không tính"]}
+          - {key: E04-02b, title: Tính cả allocation chưa giao + khóa theo cặp khách × SKU + cờ cấu hình, kind: gap, refs: [G-29, P-04, M_OD_14, M_OD_15, M_OD_16], owner: BE-1, code_h: 12,
+             desc: "Căn cứ gồm allocation ALLOCATED…DISPATCHED của đơn khác có ngày giao ≤ đơn đang chạy; advisory lock cặp khách × SKU; cờ date_reversal_include_pending (Q2).",
+             ac: ["Hai đơn song song cùng khách × SKU không đảo ngày", "Tắt cờ → chỉ dùng sổ giao"]}
+          - {key: E04-02c, title: Sổ giao khóa thật (trigger chặn UPDATE / DELETE) + bút toán đảo có duyệt, kind: gap, refs: [G-26, L3.5, ADR-006], owner: BE-2, code_h: 10,
+             desc: "Dòng đảo status = REVERSAL có reverses_id, approval_id (kind SHIPMENT_REVERSAL); query 日付逆転 bỏ dòng đã đảo.",
+             ac: ["UPDATE / DELETE sổ giao bị DB từ chối", "Đảo cần người thứ hai duyệt"]}
+      - {key: E04-03, title: "Hàm run_allocation: khóa đơn, giải phóng giữ chỗ cũ, giữ chỗ lô nguyên tử", kind: feat, refs: [ALLOC_RUN_TECH, ADR-004, API-OD-04], owner: BE-1, code_h: 10,
+         desc: "ALLOC_RUN_TECH 4.2–4.7: khóa đơn, reserve_lot nguyên tử, ghi allocations, audit.", ac: ["Hai lần chạy song song không giữ trùng lô", "Chạy lại thay giữ chỗ cũ"]}
+      - {key: E04-04, title: "Job đêm EV8: reason_code USE_BY_EXPIRED_AFTER_ALLOC + banner M_OD_13", kind: gap, refs: [G-36], owner: BE-2, code_h: 6,
+         desc: "Job đưa nhầm dòng có lô USE_BY hết hạn về BUSINESS_REVIEW. Ghi lý do riêng + exception event, chỉ allocation chưa pick.", ac: ["Banner đúng lý do", "Allocation đã pick không bị đụng"]}
+      - {key: E04-05, title: Màn hình S-OD-04 引当実行・結果, kind: feat, refs: [S-OD-04], owner: FE-1, code_h: 14,
+         desc: "Chạy phân bổ, xem lô được chọn / lô bị loại + lý do, banner BUSINESS_REVIEW / M_OD_13.", ac: ["Khớp mục 4.1 của spec", "Lý do loại hiển thị theo từng lô"]}
+      - {key: E04-06, title: Test phân bổ — 3 bẫy hạn dùng và 日付逆転 nhiều đơn, kind: test, refs: [B1, B2, B3, US-08, US-09, US-10], owner: QA-1, code_h: 16,
+         desc: "Ca E2E trên seed: 消費期限 biên, 1/3 chưa có thỏa thuận, 日付逆転 với đơn chưa giao, 2 đơn chạy song song cùng khách × SKU.", ac: ["Ca test truy về BR"]}
+      - {key: E04-07, title: "[Hỏi khách] Q2 + Q3 — 日付逆転 tính đơn chưa giao? có ngoại lệ khi khách đồng ý?", kind: clarify, refs: [Q2, Q3, P-04], owner: BrSE, code_h: 2,
+         desc: "Mặc định an toàn đang tính đơn chưa giao; chưa có ngoại lệ.", ac: ["Có câu trả lời, cập nhật cờ cấu hình"]}
+      - {key: E04-08, title: "[Hỏi khách] Q12 — đơn có dòng chưa phân bổ được: 分納 hay tách đơn", kind: clarify, refs: [Q12, G-33], owner: BrSE, code_h: 2,
+         desc: "Đơn PARTIAL hiện không lên tuyến được; chưa thiết kế (G-33).", ac: ["Có câu trả lời", "Tạo issue thiết kế bổ sung nếu cần"]}
+
+  - key: E05
+    title: Lập tuyến — bảng tuyến, thao tác tuyến, bản đồ, trạng thái tuyến
+    refs: [S-RT-01, S-RT-02-03, API-RT-01, API-RT-02, API-RT-03, API-RT-04, ADR-009, YUKI_ROUTE_DB]
+    lab1: [L4.4, L4.5, S.33, S.35]
+    issues:
+      - key: E05-01
+        title: Thao tác tuyến API-RT-02
+        kind: feat
+        refs: [API-RT-02, G-30]
+        desc: 8 action. Prototype có add_stop / move_stop / add_break / remove_stop / check / publish; thiết kế thêm create_route, update_route.
+        subs:
+          - {key: E05-01a, title: "create_route / update_route (xe, tài xế, giờ xuất phát), lý do khi tuyến đã công bố", kind: gap, refs: [G-30, FR-SCH-04], owner: BE-2, code_h: 10,
+             desc: "Không có thì R05 không gỡ được vi phạm giờ lái. Trùng giờ trả 409 M_RT_11 / M_RT_12 (dùng hàm E06-08).", ac: ["Tạo / sửa tuyến từ UI", "Tuyến đã công bố → bản mới + lý do"]}
+          - {key: E05-01b, title: "add / move / remove stop, add_break 30〜120 phút bước 5", kind: feat, refs: [API-RT-02, M_RT_01, M_RT_05, M_RT_08, M_RT_09, M_RT_10], owner: BE-2, code_h: 6,
+             desc: "Port prototype, thêm validation add_break (review LAB-4 #22).", ac: ["Mỗi lỗi trả đúng mã M_RT", "Sửa cấu trúc → DRAFT, xóa last_check"]}
+      - {key: E05-02, title: "Máy trạng thái tuyến created → checked → published → in-progress → completed / cancelled", kind: gap, refs: [G-04, DR-ROUTE-01], owner: BE-2, code_h: 8,
+         desc: "Prototype chỉ DRAFT / PUBLISHED / DISPATCHED. Bảng chuyển duy nhất ở S-RT-01 mục 6.", ac: ["Chuyển ngoài bảng bị từ chối", "Màn hình hiện đúng trạng thái"]}
+      - key: E05-03
+        title: Adapter dịch vụ bản đồ (cache 24h, timeout 5 giây)
+        kind: gap
+        refs: [G-05, ADR-009, IF-MAP-01, ASM-05]
+        desc: Thay bảng travel_times cố định. Lỗi / timeout → null → ERROR データ不足, không làm hỏng request.
+        subs:
+          - {key: E05-03a, title: Interface adapter + bản travel_times cho test, kind: gap, refs: [ADR-009], owner: BE-3, code_h: 6,
+             desc: "Định nghĩa interface getTravelMinutes(from, to); bản đọc travel_times dùng cho test / demo.", ac: ["Code lập tuyến chỉ gọi interface"]}
+          - {key: E05-03b, title: Adapter nhà cung cấp có license + cache 24h + timeout / retry, kind: gap, refs: [G-05, IF-MAP-01], owner: BE-3, code_h: 12,
+             desc: "Gọi API bản đồ do Yuki ký license; cache theo cặp điểm; estimate quá 24h lúc publish → chặn.", ac: ["Timeout 5 giây → データ不足", "Cache hit không gọi API"]}
+      - key: E05-04
+        title: Màn hình S-RT-01 配車計画ボード
+        kind: feat
+        refs: [S-RT-01]
+        desc: Bảng 3 cột đơn chưa phân / xe / tuyến, kết quả kiểm, nút công bố (R05).
+        subs:
+          - {key: E05-04a, title: Bảng 3 cột đơn chưa phân / xe / tuyến (hiển thị + lọc ngày), kind: feat, refs: [S-RT-01], owner: FE-3, code_h: 8,
+             desc: "Đọc API-RT-01, hiển thị theo ngày tuyến.", ac: ["Khớp mục 4.1 của spec"]}
+          - {key: E05-04d, title: Kéo thả đơn vào tuyến, đổi thứ tự, chèn nghỉ, kind: feat, refs: [S-RT-01, API-RT-02], owner: FE-3, code_h: 8,
+             desc: "Gọi add_stop / move_stop / add_break; lỗi M_RT hiện tại chỗ.", ac: ["Lỗi M_RT hiện tại chỗ", "Thao tác xong tuyến về DRAFT"]}
+          - {key: E05-04b, title: Section tạo / sửa tuyến (xe, tài xế, giờ xuất phát), kind: gap, refs: [G-30, S-RT-01], owner: FE-3, code_h: 8,
+             desc: "Form create_route / update_route, lý do khi đã công bố.", ac: ["Trùng giờ hiện M_RT_11 / 12"]}
+          - {key: E05-04c, title: Khối kết quả kiểm + nút công bố + hộp lý do, kind: feat, refs: [S-RT-01], owner: FE-3, code_h: 8,
+             desc: "Hiện vi phạm ERROR / WARN, chặn nút công bố khi có ERROR.", ac: ["Công bố bị chặn hiện danh sách vi phạm"]}
+      - {key: E05-05, title: Màn hình S-RT-03 ルート版履歴 (lịch sử phiên bản + so sánh), kind: feat, refs: [S-RT-02-03, FR-SCH-04], owner: FE-3, code_h: 8,
+         desc: "Danh sách phiên bản, lý do, người công bố, so sánh 2 bản.", ac: ["Khớp spec S-RT-02-03 phần ルート版履歴"]}
+      - {key: E05-06, title: "Publish song song cùng tuyến: compare-and-set version → 409 M_RT_21 (mã mới)", kind: gap, refs: [ROUTE_CHECK_TECH, M_RT_21], owner: BE-2, code_h: 4,
+         desc: "Unique (route_id, version) đang ném 500 (câu hỏi mở #4 ROUTE_CHECK_TECH). Chốt ở PREMISE.", ac: ["Publish thứ 2 nhận 409, không 500"]}
+      - {key: E05-07, title: Test lập tuyến — thao tác tuyến, trạng thái, bản đồ lỗi, kind: test, refs: [S-RT-01, API-RT-02, G-04, G-05], owner: QA-2, code_h: 10,
+         desc: "Ca thao tác, chuyển trạng thái, adapter timeout.", ac: ["Ca test truy về FR-SCH"]}
+      - {key: E05-08, title: "[Hỏi khách] Q4 — 「24時間」 ở IF-MAP-01 là tuổi cache hay thời gian chạy", kind: clarify, refs: [Q4, P-09], owner: BrSE, code_h: 1,
+         desc: "Thiết kế tạm hiểu là tuổi cache.", ac: ["Có câu trả lời"]}
+
+  - key: E06
+    title: "Ràng buộc giờ lái xe tải 2024 (改善基準告示) — tách riêng"
+    constraint: DRIVER-2024
+    refs: [ROUTE_CHECK_TECH, S-RT-02-03, P-02, B6, FR-SCH-02, FR-SCH-03, ASM-02]
+    lab1: [L4.1, L4.2, L4.3, S.34, S.12]
+    issues:
+      - {key: E06-01, title: "[Spike] Đối chiếu cách hiểu 改善基準告示 với văn bản gốc 厚労省", kind: spike, refs: [P-02, G-17, ROUTE_CHECK_TECH], owner: TL, code_h: 8,
+         desc: "LAB-4 ghi rõ 2日平均 (AND hai cặp ngày), 1 ngày = 24h từ 始業, chia nhỏ nghỉ, cách tính 時間外 lấy từ kiến thức AI, chưa đối chiếu văn bản gốc. Đọc văn bản gốc và tài liệu giải thích chính thức, ghi kết quả từng điểm.",
+         ac: ["Bảng 4 điểm: đúng / sai / khác + trích nguồn", "Nếu khác → cập nhật P-02 và issue E06-05…E06-09 trước khi code"]}
+      - {key: E06-02, title: "[Hỏi khách] Q5 — kỳ tháng / năm, mốc khối 2 tuần, chia nhỏ nghỉ, 休日労働", kind: clarify, refs: [Q5, P-02], owner: BrSE, code_h: 2,
+         desc: "Tham số RULESET còn giả định; cần khách chốt trước khi build F06.", ac: ["Có câu trả lời", "Cập nhật RULESET"]}
+      - {key: E06-03, title: "[Hỏi khách] Số dư giờ đầu kỳ khi go-live giữa năm tài chính + nguồn giờ thực tế", kind: clarify, refs: [ROUTE_CHECK_TECH, G-31], owner: BrSE, code_h: 2,
+         desc: "Câu hỏi mở #6, #8 của ROUTE_CHECK_TECH: không có số dư đầu kỳ thì ngưỡng năm kiểm thiếu; giờ thực tế (tachograph / 点呼) chưa có nguồn.", ac: ["Có câu trả lời", "Nếu cần nhập số dư → issue bổ sung ở E13"]}
+      - {key: E06-04, title: RULESET có phiên bản (KAIZEN-2024-04) đọc từ khung chính sách, kind: gap, refs: [ADR-007, API-MS-06, E01-05], owner: BE-2, code_h: 6,
+         desc: "Ngưỡng ngày + kỳ + tham số kỳ (twoWeekAnchor, đầu tuần, đầu năm tài chính) nằm trong chính sách có phiên bản; tuyến gắn rule_version lúc công bố.", ac: ["Đổi ngưỡng = phiên bản mới, không áp hồi tố"]}
+      - {key: E06-05, pure: true, title: buildTimeline + gộp mọi tuyến cùng ngày của một tài xế, kind: gap, refs: [G-02, ROUTE_CHECK_TECH], owner: BE-2, code_h: 8,
+         desc: "ROUTE_CHECK_TECH 4.2: segments PRETRIP / DRIVE / SERVICE / BREAK / POSTTRIP; mục 7: gộp tuyến PUBLISHED / DISPATCHED / DRAFT cùng driver_id cùng route_date; khoảng trống giữa tuyến tính là 拘束.", ac: ["2 tuyến cùng ngày được cộng dồn", "Thiếu travel_times → データ不足"]}
+      - key: E06-06
+        title: checkDriverHours — các ràng buộc theo ngày
+        kind: gap
+        refs: [ROUTE_CHECK_TECH, B6, US-17]
+        desc: Kiểm từng ràng buộc riêng, không cộng gộp; ERROR có from / to để tô đúng khoảng giờ.
+        subs:
+          - {key: E06-06a, pure: true, title: "拘束 15h / 13h, 連続運転 4h (nghỉ ≥ 30 phút reset), 休息 9h / 11h với ca trước suy từ tuyến D−1", kind: gap, refs: [G-02, ROUTE_CHECK_TECH], owner: BE-2, code_h: 8,
+             desc: "prevShiftEnd, prevDayDriveMin lấy từ tuyến gần nhất ngày D−1 thay dữ liệu tĩnh trên drivers.", ac: ["Ca biên 15h00 / 15h01", "SERVICE không reset lái liên tục"]}
+          - {key: E06-06b, pure: true, title: "2日平均: vi phạm khi cả hai cặp ngày > 9h; WARN tạm khi chưa có D+1; kiểm lại khi công bố D+1", kind: gap, refs: [G-17, P-02], owner: BE-2, code_h: 10,
+             desc: "ROUTE_CHECK_TECH 4.3 mục 8 (a)–(e). Phụ thuộc kết quả spike E06-01.", ac: ["Chỉ một cặp > 9h → OK", "Công bố D+1 làm D vi phạm → ERROR trên tuyến D+1"]}
+          - {key: E06-06c, pure: true, title: "「1 ngày」 = 24h từ 始業: phần chồng sang D+1 cộng vào 拘束 ngày D", kind: gap, refs: [P-02, ROUTE_CHECK_TECH], owner: BE-2, code_h: 8,
+             desc: "ROUTE_CHECK_TECH 4.3 mục 10, kiểm cả hai phía.", ac: ["Ca D+1 bắt đầu sớm làm D vượt 15h → ERROR trên D+1"]}
+      - key: E06-07
+        title: checkPeriodLimits — ngưỡng tuần / tháng / năm
+        kind: gap
+        refs: [G-31, FR-SCH-02, ASM-02, ROUTE_CHECK_TECH]
+        desc: Cộng dồn theo tài xế từ driver_daily_hours (giờ kế hoạch của tuyến đã công bố). Kỳ là giả định chờ Q5.
+        subs:
+          - {key: E06-07a, title: Bảng driver_daily_hours + ghi lại khi publish trong cùng transaction, kind: gap, refs: [G-31, YUKI_ROUTE_DB, ADR-004], owner: BE-2, code_h: 8,
+             desc: "publish_route() ghi lại dòng (tài xế × ngày) từ mọi tuyến đã công bố; đổi tài xế thì ghi lại cả tài xế cũ.", ac: ["Không đếm 2 lần tuyến đang sửa sau công bố"]}
+          - {key: E06-07b, pure: true, title: "拘束 tháng 284h, năm 3.300h (năm tài chính 4/1〜3/31)", kind: gap, refs: [G-31, M_RT_16, M_RT_17], owner: BE-2, code_h: 6,
+             desc: "Tổng gồm cả ngày trước và sau route_date đã công bố; vi phạm gắn vào tuyến làm tổng vượt.", ac: ["Ví dụ 佐藤 285h > 284h bị chặn"]}
+          - {key: E06-07c, pure: true, title: Lái bình quân 44h/tuần trên khối 2 tuần cố định, kind: gap, refs: [G-31, M_RT_18], owner: BE-2, code_h: 6,
+             desc: "Khối 14 ngày từ RULESET.twoWeekAnchor (giả định 2026-04-05).", ac: ["Σ 88h01 trong khối → ERROR"]}
+          - {key: E06-07d, pure: true, title: "時間外 960h / năm (8h / ngày, 40h / tuần)", kind: gap, refs: [G-31, M_RT_19], owner: BE-2, code_h: 8,
+             desc: "労働 = 拘束 − 休憩; vượt ngày + vượt tuần; không tách 休日労働 (Q5).", ac: ["Unit test bảng tuần mẫu"]}
+          - {key: E06-07e, pure: true, title: "拘束 > 14h quá 2 lần / tuần → WARN", kind: gap, refs: [G-31, M_RT_20], owner: BE-2, code_h: 3,
+             desc: "目安, không chặn công bố.", ac: ["Lần thứ 3 trong tuần → WARN"]}
+      - {key: E06-08, pure: true, title: checkOverlap — trùng giờ tài xế / xe trong khoảng D±1, kind: gap, refs: [G-30, M_RT_11, M_RT_12], owner: BE-2, code_h: 6,
+         desc: "ROUTE_CHECK_TECH 4.3.2; cùng hàm dùng cho create_route / update_route (409) và check / publish (vi phạm).", ac: ["Seed 佐藤 sau khi gán ORD-0001 → 乗務重複"]}
+      - {key: E06-09, title: "Publish: chạy lại toàn bộ kiểm, chặn ERROR, snapshot inputs / period / rule_version", kind: gap, refs: [G-32, ADR-007, FR-SCH-04], owner: BE-2, code_h: 8,
+         desc: "ROUTE_CHECK_TECH 4.4–4.5. Tuyến đã công bố hiện snapshot, chỉ DRAFT tính lại.", ac: ["Đổi RULESET không đổi kết quả tuyến đã công bố"]}
+      - {key: E06-10, title: Gợi ý vị trí chèn nghỉ khi 連続運転 sắp vượt 4h, kind: feat, refs: [FR-SCH-03, F06-05, L4.3], owner: BE-2, code_h: 8,
+         desc: "LAB-1 có F06-05 「tự chèn điểm nghỉ」 (L4.3, 4 MD) nhưng LAB-4 chỉ có add_break thủ công. Bổ sung: kết quả check trả vị trí đề xuất chèn BREAK 30 phút; R05 bấm để áp (xem PREMISE).", ac: ["Tuyến vượt 4h có đề xuất", "Áp đề xuất → check lại hết ERROR lái liên tục"]}
+      - key: E06-11
+        title: Màn hình S-RT-02 改善基準チェック結果
+        kind: feat
+        refs: [S-RT-02-03, G-32]
+        desc: Dòng thời gian, tô khoảng vi phạm, bảng lũy kế kỳ, nhãn SNAPSHOT / RECALC.
+        subs:
+          - {key: E06-11a, title: Dòng thời gian + tô khoảng vi phạm ERROR / WARN, kind: feat, refs: [S-RT-02-03], owner: FE-2, code_h: 12,
+             desc: "Hiện segments và from / to của từng vi phạm.", ac: ["Khớp spec S-RT-02-03"]}
+          - {key: E06-11b, title: Bảng lũy kế kỳ (tháng / năm / 2 tuần / 14h超) + nhãn SNAPSHOT / RECALC, kind: feat, refs: [G-31, G-32], owner: FE-2, code_h: 6,
+             desc: "Đọc result.period; tuyến đã công bố hiện snapshot.", ac: ["Tuyến đã công bố có nhãn SNAPSHOT"]}
+      - key: E06-12
+        title: Bộ test giờ lái 2024
+        kind: test
+        refs: [B6, US-17, US-18, N4.6]
+        desc: Test riêng cho ràng buộc giờ lái; chạy lại toàn bộ khi RULESET đổi.
+        subs:
+          - {key: E06-12a, title: Unit test bảng ca biên từng ràng buộc ngày và kỳ, kind: test, refs: [B6, G-17, G-31], owner: QA-2, code_h: 12,
+             desc: "14h59 / 15h01, 4h liên tục, nghỉ 29 / 30 phút, 休息 8h59, 2日平均 các tổ hợp AND, 284h, 88h, 960h.", ac: ["Mỗi ràng buộc ≥ 2 ca biên"]}
+          - {key: E06-12b, title: Seed nhiều ngày / nhiều tài xế cho kiểm kỳ + sửa seed trùng lịch 佐藤, kind: test, refs: [G-30, G-31], owner: QA-2, code_h: 6,
+             desc: "Seed 1 tháng tuyến đã công bố cho 3 tài xế; dời RT-0911-03 (xem PREMISE).", ac: ["Seed tái tạo được ví dụ 285h"]}
+          - {key: E06-12c, title: "E2E: công bố bị chặn → sửa tuyến (đổi tài xế / chèn nghỉ) → công bố được", kind: test, refs: [US-17, US-18], owner: QA-2, code_h: 8,
+             desc: "Kịch bản R05 trên S-RT-01 / S-RT-02.", ac: ["Chạy được trong CI"]}
+      - {key: E06-13, title: "Màn hình S-MS-08 bộ quy tắc giờ lái (phiên bản) — chưa có spec", kind: coarse, refs: [S.12, F06, ADR-007], owner: FE-3, lab1: [S.12],
+         desc: "LAB-1 có màn hình, LAB-4 chưa spec. Cần viết spec trước khi build; dùng khung chính sách E01-05.", ac: ["Có spec BM-51 trước khi kéo vào sprint"]}
+
+  - key: E07
+    title: Giao hàng và POD (納品・POD登録)
+    refs: [S-DR-03, POD_COMPLETE_TECH, API-DR-02, API-DR-03, ADR-010]
+    lab1: [L5.1, L5.2, L5.3, S.39]
+    issues:
+      - {key: E07-01, title: "Transaction complete_delivery(): POD + sổ giao + trừ tồn + trạng thái đơn", kind: feat, refs: [POD_COMPLETE_TECH, ADR-004, B7], owner: BE-3, code_h: 8,
+         desc: "POD_COMPLETE_TECH 4.5, 1 POD / 1 điểm.", ac: ["Lỗi giữa chừng rollback toàn bộ"]}
+      - {key: E07-02, title: Kiểm bộ bằng chứng theo pod_evidence_rules (車上 / 軒先, đơn 2 điều kiện → bộ chặt hơn), kind: feat, refs: [P-06, G-13, BR-POD-01], owner: BE-3, code_h: 6,
+         desc: "Bộ bằng chứng cấu hình theo bảng, không hard-code.", ac: ["Thiếu ảnh ở 軒先 → lỗi M_DR"]}
+      - {key: E07-03, title: "Kiểm 消費期限 ở POD theo ngày JST của captured_at trong khoảng [xuất xe, giờ server]", kind: gap, refs: [G-07, G-27, M_DR_07], owner: BE-3, code_h: 6,
+         desc: "Chống lách bằng lùi đồng hồ máy.", ac: ["captured_at ngoài khoảng → dùng giờ server + cờ", "USE_BY = ngày giao → chặn"]}
+      - {key: E07-04, title: "品温 theo từng dải; ngoài dải / REJECTED → lô con {lot}-R{stop} QUARANTINE", kind: gap, refs: [G-23, G-28, M_DR_11, M_DR_15], owner: BE-3, code_h: 12,
+         desc: "Cùng transaction POD: trừ phần trả về khỏi lô gốc, tạo lô con chờ 返品入荷 + QA.", ac: ["Lô hỏng không được phân bổ lại", "Case có lô con"]}
+      - key: E07-05
+        title: Ảnh và chữ ký POD (băm, lưu trữ, ký tay)
+        kind: gap
+        refs: [G-18, L5.3, DR-POD-01]
+        desc: Prototype chữ ký = gõ tên.
+        subs:
+          - {key: E07-05a, pure: true, title: Canvas ký tay xuất ảnh, kind: gap, refs: [G-18], owner: FE-2, code_h: 6, desc: "Ký trên thiết bị tài xế.", ac: ["Ảnh chữ ký lưu kèm POD"]}
+          - {key: E07-05b, title: Băm SHA-256 + tải lên Storage + metadata, kind: feat, refs: [POD_COMPLETE_TECH, DR-POD-01], owner: BE-3, code_h: 6,
+             desc: "POD_COMPLETE_TECH 4.4.", ac: ["Hash lưu cùng bản ghi", "Tải lỗi → không hoàn tất POD"]}
+      - key: E07-06
+        title: POD offline (PWA + IndexedDB mã hóa ≤ 8h)
+        kind: gap
+        refs: [G-06, ADR-010, API-DR-03, NFR-AVL-02, US-21]
+        desc: Mất sóng khi giao vẫn ghi POD, đồng bộ đúng 1 lần.
+        subs:
+          - {key: E07-06a, title: Service worker + cache app shell màn hình tài xế, kind: gap, refs: [ADR-010], owner: FE-2, code_h: 8,
+             desc: "Mở được S-DR-01 / S-DR-03 khi mất mạng.", ac: ["Tắt mạng vẫn mở được màn hình POD"]}
+          - {key: E07-06d, title: Hàng đợi IndexedDB mã hóa ≤ 8h + cảnh báo quá hạn, kind: gap, refs: [ADR-010, NFR-AVL-02], owner: FE-2, code_h: 8,
+             desc: "Lưu POD khi offline, mã hóa khóa thiết bị, giữ ≤ 8h.", ac: ["Tắt mạng vẫn ghi được", "Quá 8h cảnh báo"]}
+          - {key: E07-06b, title: API-DR-03 đồng bộ idempotent theo client_pod_id, kind: gap, refs: [API-DR-03], owner: BE-3, code_h: 8,
+             desc: "Gửi lại không tạo POD thứ 2.", ac: ["Đồng bộ 2 lần → 1 POD"]}
+          - {key: E07-06c, title: Test cắt mạng khi giao, kind: test, refs: [N4.12, US-21], owner: QA-2, code_h: 6,
+             desc: "Kịch bản offline → online.", ac: ["Không mất / trùng POD"]}
+      - {key: E07-07, title: Màn hình S-DR-03 納品・POD登録 (thiết bị tài xế), kind: feat, refs: [S-DR-03], owner: FE-2, code_h: 14,
+         desc: "Bằng chứng theo điều kiện giao, 品温 từng dải, trạng thái offline.", ac: ["Khớp mục 4.1 của spec"]}
+      - {key: E07-08, title: "Kiểm 消費期限 ở pick / load / 出荷前点検 (M_SH_08)", kind: gap, refs: [G-07, M_SH_08], owner: BE-3, code_h: 6,
+         desc: "Prototype chỉ kiểm khi phân bổ; thiết kế kiểm thêm ở 3 bước xuất kho.", ac: ["Lô hết hạn sau phân bổ bị chặn ở pick"]}
+      - {key: E07-09, title: Test POD — bằng chứng, 品温, 消費期限, lô con, kind: test, refs: [B7, G-27, G-28], owner: QA-2, code_h: 10,
+         desc: "Ca E2E trên seed.", ac: ["Ca test truy về BR-POD / BR-EXP"]}
+      - {key: E07-10, title: "[Hỏi khách] Q1 — bộ bằng chứng POD theo từng hợp đồng", kind: clarify, refs: [Q1, P-06], owner: BrSE, code_h: 1,
+         desc: "Đang dùng giả định P-06.", ac: ["Có câu trả lời, cập nhật pod_evidence_rules"]}
+
+  - key: E08
+    title: Nhiệt độ và HACCP (ロガー取込・アラーム・逸脱)
+    refs: [S-TP-02-03, S-TP-04, TEMP_IMPORT_TECH, API-TP-02, API-TP-03, API-TP-04, API-TP-05, API-TP-06, ADR-008, YUKI_TEMP_DB]
+    lab1: [L6.1, L6.2, L6.3, S.44, S.45, S.46]
+    issues:
+      - {key: E08-01, title: API-TP-02 nhập CSV logger (SHA-256 chống trùng, từ chối dòng sai kèm số dòng), kind: feat, refs: [TEMP_IMPORT_TECH, ADR-008, US-22], owner: BE-3, code_h: 8,
+         desc: "TEMP_IMPORT_TECH 4.1–4.3; lưu file gốc làm bằng chứng.", ac: ["Nhập lại cùng file → từ chối", "Dòng sai báo số dòng"]}
+      - {key: E08-02, pure: true, title: findExcursions + thống nhất định nghĩa duration_min và sửa seed, kind: gap, refs: [G-34, B9], owner: BE-3, code_h: 6,
+         desc: "Code last − first + 15, seed ghi 45 phút cho 14:00–14:45. Chốt theo code (PREMISE).", ac: ["Seed và code cùng một định nghĩa"]}
+      - {key: E08-03, title: "Lô bị ảnh hưởng: received_at ≤ last_at và cả lô đã xuất từ first_at", kind: gap, refs: [G-08, FR-TEMP-02], owner: BE-3, code_h: 8,
+         desc: "Prototype lấy lô đang trong dải lúc upload.", ac: ["Lô đã xuất trong khoảng vượt vẫn bị liệt kê"]}
+      - {key: E08-04, title: "SLA 15 phút: sla_due_at từ server, elapsedMin / lateMin đúng nghĩa", kind: gap, refs: [G-35, ASM-03, P-03], owner: BE-3, code_h: 4,
+         desc: "lateMin hiện là số phút từ lúc tạo cảnh báo.", ac: ["lateMin = max(0, elapsed − 15)"]}
+      - {key: E08-05, title: "API-TP-04 đo lại: về ngưỡng → đóng; vẫn vượt → mở case + cách ly", kind: feat, refs: [API-TP-04, P-08], owner: BE-3, code_h: 6,
+         desc: "TEMP_IMPORT_TECH 4.7.", ac: ["Vẫn vượt → lô QUARANTINE + case mở"]}
+      - {key: E08-06, title: "Case sai lệch API-TP-05 / 06: điều tra → khắc phục → quyết định → đóng", kind: feat, refs: [API-TP-05, API-TP-06, FR-TEMP-04], owner: BE-3, code_h: 10,
+         desc: "Chuyển bước có lý do, liên kết trạng thái chất lượng (E03-01b).", ac: ["Không nhảy bước"]}
+      - key: E08-07
+        title: Màn hình S-TP-02-03 hàng đợi cảnh báo + đo lại
+        kind: feat
+        refs: [S-TP-02-03]
+        desc: Trang gộp 2 mã LAB-1 (S-TP-02 PC, S-TP-03 HT).
+        subs:
+          - {key: E08-07a, title: Hàng đợi cảnh báo đếm ngược theo sla_due_at server, kind: feat, refs: [S-TP-02-03, API-TP-03], owner: FE-3, code_h: 8,
+             desc: "Danh sách cảnh báo, đếm ngược, đánh dấu trễ SLA.", ac: ["Khớp spec phần アラーム対応キュー", "Trễ SLA hiện rõ"]}
+          - {key: E08-07b, title: Form đo lại trên thiết bị cửa kho, kind: feat, refs: [S-TP-02-03, API-TP-04], owner: FE-3, code_h: 6,
+             desc: "Nhập nhiệt đo lại, hiện kết quả đóng / mở case.", ac: ["Khớp spec phần 再測定登録"]}
+      - key: E08-08
+        title: Màn hình S-TP-04 逸脱ケース
+        kind: feat
+        refs: [S-TP-04]
+        desc: Màn hình độ phức tạp L ở LAB-1 (S.46, 12 MD) — luồng 4 bước có lý do và lô liên quan.
+        subs:
+          - {key: E08-08a, title: Danh sách case + chi tiết case và lô liên quan, kind: feat, refs: [S-TP-04, API-TP-05], owner: FE-3, code_h: 8,
+             desc: "Lọc theo trạng thái, xem excursion, lô bị ảnh hưởng.", ac: ["Khớp mục 4.1 của spec"]}
+          - {key: E08-08b, title: Form chuyển bước điều tra → khắc phục → quyết định → đóng, kind: feat, refs: [S-TP-04, API-TP-06], owner: FE-3, code_h: 8,
+             desc: "Mỗi bước có lý do; quyết định RELEASE / DISPOSE đổi trạng thái lô.", ac: ["Không nhảy bước", "Nút theo quyền R04"]}
+      - {key: E08-09, title: Test nhiệt độ — biên 5,0 / 5,1°C, file trùng, SLA trễ, đo lại, kind: test, refs: [B5, B9, US-22, US-26], owner: QA-1, code_h: 14,
+         desc: "Ca E2E trên seed.", ac: ["Ca test truy về FR-TEMP"]}
+
+  - key: E09
+    title: Truy xuất nguồn gốc (トレース検索)
+    refs: [S-TR-01, API-TR-01, B8]
+    lab1: [L7.1, S.51]
+    issues:
+      - {key: E09-01, title: Bộ máy truy xuất xuôi / ngược, chuỗi đứt hiện rõ, kind: feat, refs: [API-TR-01, B8, FR-TRC-01], owner: BE-1, code_h: 12,
+         desc: "Gạo (xuất xứ + mã giao dịch), bò (mã cá thể 10 số), SKU khác = lô nội bộ; không suy đoán khi đứt chuỗi.", ac: ["Chuỗi đứt trả điểm đứt", "Không tự bù mã bò"]}
+      - {key: E09-02, title: "Hiệu năng truy xuất ≤ 60 giây với dữ liệu 3 năm", kind: feat, refs: [NFR-PERF-02, US-27], owner: BE-1, code_h: 10,
+         desc: "Script sinh dữ liệu 3 năm (300.000 dòng xuất) + index + đo.", ac: ["P95 ≤ 60 giây"]}
+      - key: E09-03
+        title: Màn hình S-TR-01 トレース検索
+        kind: feat
+        refs: [S-TR-01]
+        desc: Màn hình độ phức tạp L ở LAB-1 (S.51, 12 MD).
+        subs:
+          - {key: E09-03a, title: Ô tìm (≥ 3 ký tự) + danh sách kết quả lô / giao, kind: feat, refs: [S-TR-01, API-TR-01], owner: FE-1, code_h: 8,
+             desc: "Tìm theo lô, mã cá thể bò, mã giao dịch gạo.", ac: ["< 3 ký tự báo lỗi M_TR"]}
+          - {key: E09-03b, title: Cây quan hệ xuôi / ngược + đánh dấu điểm đứt chuỗi, kind: feat, refs: [S-TR-01, B8], owner: FE-1, code_h: 10,
+             desc: "Hiện lô cha / con, điểm giao, chỗ đứt không suy đoán.", ac: ["Khớp mục 4.1 của spec", "Điểm đứt hiện rõ"]}
+      - {key: E09-05, title: "Truy xuất qua lô con (POD trả về {lot}-R{stop}, parent_lot_id)", kind: gap, refs: [G-28, API-TR-01], owner: BE-1, code_h: 6,
+         desc: "Lô con tạo ở E07-04 phải nối được về lô gốc khi truy xuất xuôi / ngược.", ac: ["Truy ngược từ lô con ra lô gốc và NCC"]}
+      - {key: E09-04, title: Test truy xuất gạo / bò / lô nội bộ, kind: test, refs: [B8, US-27], owner: QA-1, code_h: 6,
+         desc: "Ca chuỗi đủ / đứt.", ac: ["Ca test truy về BR-TRACE"]}
+
+  - key: E10
+    title: Duyệt bởi người thứ hai (二者承認)
+    refs: [S-CM-03, APPROVAL_DECIDE_TECH, API-CM-02, API-CM-03, ADR-005]
+    lab1: [L1.6, S.3]
+    issues:
+      - {key: E10-01, title: "API-CM-03: người đề xuất ≠ người duyệt (API 403 + CHECK DB), compare-and-set, lý do bắt buộc", kind: feat, refs: [APPROVAL_DECIDE_TECH, B10, NFR-SEC-02], owner: BE-2, code_h: 6,
+         desc: "APPROVAL_DECIDE_TECH 4.1–4.5.", ac: ["Tự duyệt → 403", "Hai người duyệt cùng lúc → 1 thắng"]}
+      - key: E10-02
+        title: Mở rộng approvals.kind lên 6 loại + ma trận người duyệt cấu hình
+        kind: gap
+        refs: [G-12, P-14, US-31]
+        desc: Prototype có 2 loại; US-31 cần 6 (chênh lệch nhập, điều chỉnh tồn, vùng nhiệt tạm, master, bút toán đảo, thông báo thu hồi).
+        subs:
+          - {key: E10-02a, title: Khung kind + ma trận người duyệt theo loại (cấu hình), kind: gap, refs: [G-12, P-14], owner: BE-2, code_h: 8,
+             desc: "Ma trận api-conventions mục 5 thành bảng cấu hình.", ac: ["Đổi người duyệt không sửa code"]}
+          - {key: E10-02b, title: Áp payload cho 4 loại mới khi duyệt, kind: gap, refs: [G-12, APPROVAL_DECIDE_TECH], owner: BE-2, code_h: 10,
+             desc: "APPROVAL_DECIDE_TECH 4.3 cho từng loại.", ac: ["Mỗi loại có unit test áp payload"]}
+      - {key: E10-03, title: Màn hình S-CM-03 承認待ち一覧・承認, kind: feat, refs: [S-CM-03], owner: FE-1, code_h: 10,
+         desc: "Danh sách chờ duyệt, cờ 「của chính tôi」, duyệt / từ chối có lý do.", ac: ["Khớp mục 4.1 của spec", "Đề xuất của chính mình không có nút duyệt"]}
+      - {key: E10-04, title: Test 二者承認 cho 6 loại, kind: test, refs: [B10, US-31], owner: QA-1, code_h: 6,
+         desc: "Ca tự duyệt, duyệt song song, thiếu lý do.", ac: ["Ca test truy về NFR-SEC-02"]}
+      - {key: E10-05, title: "[Hỏi khách] Q11 — ai duyệt từng loại; ngưỡng điều chỉnh tồn cần duyệt", kind: clarify, refs: [Q11, P-14], owner: BrSE, code_h: 1,
+         desc: "Toàn bộ ma trận là giả định.", ac: ["Có câu trả lời, cập nhật ma trận"]}
+
+  # ───────────────────────── Phần LAB-1 chưa có spec LAB-4: issue thô ─────────────────────────
+  - key: E11
+    title: Màn hình và xử lý nền LAB-1 chưa có spec LAB-4 (issue thô)
+    coarse: true
+    refs: [04-screen-list, PREMISE-LAB4-2]
+    issues:
+      - {key: E11-01, title: "Chung: trang chủ theo vai trò, người dùng và phân quyền", kind: coarse, owner: FE-1, lab1: [S.2, S.4], refs: [F11]}
+      - {key: E11-02, title: "Master dữ liệu: SKU, khách × thỏa thuận, NCC, vị trí, thiết bị, xe × tài xế", kind: coarse, owner: FE-1, lab1: [S.5, S.6, S.7, S.8, S.9, S.10], refs: [F01]}
+      - {key: E11-03, title: "Master chính sách nhiệt độ / HACCP và đề xuất thay đổi master", kind: coarse, owner: FE-1, lab1: [S.11, S.13], refs: [F01, ADR-007]}
+      - {key: E11-04, title: "Nhập hàng: lịch hẹn xe nhập, kết quả nhập và duyệt chênh lệch", kind: coarse, owner: FE-2, lab1: [S.14, S.16], refs: [F02]}
+      - {key: E11-05, title: "Tồn kho: cất hàng, di chuyển, vùng nhiệt tạm, kiểm kê, tra cứu, sổ di chuyển", kind: coarse, owner: FE-2, lab1: [S.17, S.18, S.19, S.21, S.22, S.23, S.24, L2.3, L2.5], refs: [F03]}
+      - {key: E11-06, title: "Đơn hàng: danh sách, nhập / sửa, nhập CSV, sổ lịch sử giao", kind: coarse, owner: FE-1, lab1: [S.25, S.26, S.27, S.29], refs: [F05, ADR-006]}
+      - {key: E11-07, title: "Xuất kho: nhiệm vụ lấy hàng, quét lấy hàng, xếp xe và 出荷前点検", kind: coarse, owner: FE-2, lab1: [S.30, S.31, S.32], refs: [F05]}
+      - {key: E11-08, title: "Vận hành tuyến và POD: sự cố, lịch trình tài xế, sự kiện tuyến, chờ đồng bộ, tra cứu POD, trả hàng", kind: coarse, owner: FE-3, lab1: [S.36, S.37, S.38, S.40, S.41, S.42], refs: [F06, F07]}
+      - {key: E11-09, title: "Nhiệt độ / HACCP: nhập CSV, diễn biến nhiệt, vệ sinh, hồ sơ thiếu, review ngày / tháng", kind: coarse, owner: FE-3, lab1: [S.43, S.47, S.48, S.49, S.50, L6.4], refs: [F08]}
+      - {key: E11-10, title: "Thu hồi: case thu hồi, đối soát số lượng, thông báo thu hồi", kind: coarse, owner: FE-1, lab1: [S.52, S.53, L7.2, L7.3], refs: [F09]}
+
+  - key: E12
+    title: Báo cáo và kiểm toán F10 (issue thô)
+    coarse: true
+    refs: [F10, ASM-15]
+    issues:
+      - {key: E12-01, title: "Khung báo cáo + cổng báo cáo + màn hình báo cáo chung", kind: coarse, owner: BE-1, lab1: [L8.1, S.54, S.55], refs: [F10]}
+      - {key: E12-02, title: "Báo cáo 1–3: tồn theo hạn, sắp hết hạn, cách ly", kind: coarse, owner: BE-1, lab1: [L8.2], refs: [F10]}
+      - {key: E12-03, title: "Báo cáo 4–6: thiếu HACCP, vượt nhiệt, SLA cảnh báo", kind: coarse, owner: BE-3, lab1: [L8.3], refs: [F10]}
+      - {key: E12-04, title: "Báo cáo 7–9: chênh lệch nhập, hiệu suất giao, độ đầy đủ POD", kind: coarse, owner: BE-3, lab1: [L8.4], refs: [F10]}
+      - {key: E12-05, title: "Báo cáo 10–12: tuân thủ giờ lái tài xế, đối soát thu hồi, thay đổi kiểm toán", kind: coarse, owner: BE-2, lab1: [L8.5], refs: [F10, DRIVER-2024]}
+      - {key: E12-06, title: "Xuất gói bằng chứng kiểm toán có manifest SHA-256", kind: coarse, owner: BE-1, lab1: [L8.6, S.56], refs: [API-RP-01, F10]}
+      - {key: E12-07, title: "Lưu trữ, thời hạn lưu, legal hold, tra cứu nhật ký kiểm toán", kind: coarse, owner: BE-1, lab1: [L8.7, S.57, S.58], refs: [F10]}
+
+  - key: E13
+    title: Liên kết ERP và chuyển đổi dữ liệu F12 / F13 (issue thô)
+    coarse: true
+    refs: [F12, F13, ASM-06, ASM-09, G-10]
+    issues:
+      - {key: E13-01, title: "Xuất doanh thu CSV qua SFTP + worker ngoài Vercel + màn hình lịch sử chạy", kind: coarse, owner: BE-3, lab1: [L9.1, L9.2, S.59], refs: [F12, Q6]}
+      - {key: E13-02, title: "Profiling dữ liệu nguồn + bảng ánh xạ mã cũ → mới", kind: coarse, owner: BE-1, lab1: [L10.1, L10.2, S.61], refs: [F13]}
+      - {key: E13-03, title: "Nạp master và lô / tồn kho có lineage", kind: coarse, owner: BE-1, lab1: [L10.3, L10.4], refs: [F13]}
+      - {key: E13-04, title: "Nạp lịch sử xuất 3 năm (căn cứ 日付逆転)", kind: coarse, owner: BE-1, lab1: [L10.5], refs: [F13, G-10, ADR-006]}
+      - {key: E13-05, title: "Nạp nhiệt độ, tuyến / POD + ảnh cũ, dữ liệu gạo / bò", kind: coarse, owner: BE-3, lab1: [L10.6, L10.7, L10.8], refs: [F13]}
+      - {key: E13-06, title: "Báo cáo đối soát chuyển đổi + màn hình chạy nạp", kind: coarse, owner: BE-3, lab1: [L10.9, S.60], refs: [F13]}
+
+  - key: E14
+    title: Hạ tầng và nền tảng chưa có spec (SSO, thiết bị, mail, mã hóa, môi trường) (issue thô)
+    coarse: true
+    refs: [ADR-001, ASM-07, ASM-08]
+    issues:
+      - {key: E14-01, title: "SSO với IdP công ty + MFA + màn hình đăng nhập", kind: coarse, owner: BE-2, lab1: [L1.4, S.1], refs: [F11]}
+      - {key: E14-02, title: "Xác thực thiết bị dùng chung + chế độ thiết bị cửa kho", kind: coarse, owner: FE-2, lab1: [L1.5, L1.11], refs: [F11, ASM-07]}
+      - {key: E14-03, title: "Thông báo mail qua relay, hàng đợi retry, mẫu tiếng Nhật", kind: coarse, owner: BE-3, lab1: [L1.8], refs: [F11]}
+      - {key: E14-04, title: "Mã hóa DB, file, hàng đợi offline", kind: coarse, owner: BE-3, lab1: [L1.9], refs: [NFR-SEC]}
+      - {key: E14-05, title: "WCAG 2.2 AA cho component chung", kind: coarse, owner: FE-1, lab1: [L1.12], refs: [NFR]}
+      - {key: E14-06, title: "4 môi trường + CI/CD web, edge function, migration, worker SFTP", kind: coarse, owner: Infra, lab1: [N2.1, N2.2, N2.3, N2.4], refs: [ADR-001, ASM-08]}
+      - {key: E14-07, title: "Giám sát, log tập trung, sao lưu PITR, quy trình khôi phục", kind: coarse, owner: Infra, lab1: [N2.5, N2.6], refs: [NFR-OPS]}
+      - {key: E14-08, title: "Bảo mật pipeline (header, secret, SBOM, quét lỗ hổng) + che dữ liệu môi trường test", kind: coarse, owner: Infra, lab1: [N2.7, N2.8], refs: [NFR-SEC]}
+      - {key: E14-09, title: "Tài liệu hạ tầng và runbook", kind: coarse, owner: Infra, lab1: [N2.9], refs: [NFR-OPS]}
+
+  - key: E15
+    title: Kiểm thử hệ thống P2 (issue thô)
+    coarse: true
+    refs: [OPS-TEST-01, ACC]
+    issues:
+      - {key: E15-01, title: "Kế hoạch test + truy vết test → yêu cầu + fixture RFP", kind: coarse, owner: QA-1, lab1: [N4.1, N4.2], refs: [OPS-TEST-01]}
+      - {key: E15-02, title: "E2E luồng kho: nhận → lô → phân bổ → lấy → xuất → POD", kind: coarse, owner: QA-1, lab1: [N4.3], refs: [ACC-FUN-01]}
+      - {key: E15-03, title: "E2E quy tắc ngày: loại hạn, cửa sổ giao, FEFO, 日付逆転", kind: coarse, owner: QA-1, lab1: [N4.4], refs: [ACC-FUN-01]}
+      - {key: E15-04, title: "E2E nhiệt độ: biên, vượt ngưỡng, thiếu bản ghi, review trễ", kind: coarse, owner: QA-1, lab1: [N4.5], refs: [ACC-FUN-01]}
+      - {key: E15-05, title: "E2E lập tuyến tích hợp (bình thường, bất khả thi, nghỉ, sự cố) — chạy sau bộ test E06-12", kind: coarse, owner: QA-2, lab1: [N4.6], refs: [ACC-FUN-01, DRIVER-2024]}
+      - {key: E15-06, title: "E2E truy xuất / thu hồi: gạo, bò, lô nội bộ, đối soát", kind: coarse, owner: QA-2, lab1: [N4.7], refs: [ACC-FUN-01]}
+      - {key: E15-07, title: "Test hiệu năng 80 người dùng đồng thời", kind: coarse, owner: QA-2, lab1: [N4.8], refs: [NFR-PERF]}
+      - {key: E15-08, title: "Test bảo mật + báo cáo accessibility", kind: coarse, owner: QA-2, lab1: [N4.9, N4.10], refs: [NFR-SEC]}
+      - {key: E15-09, title: "Diễn tập giám sát / khôi phục + test cắt mạng POD", kind: coarse, owner: QA-2, lab1: [N4.11, N4.12], refs: [NFR-OPS]}
+      - {key: E15-10, title: "Hồi quy hệ thống vòng 1 và 2", kind: coarse, owner: QA-1, lab1: [N4.13, N4.14], refs: [OPS-TEST-01]}
