@@ -2,7 +2,7 @@
 
 | Dự án | Mã học viên | Đề |
 |---|---|---|
-| Yuki Cold Chain WMS/TMS (hệ thống kho lạnh và vận tải, khách hư cấu) | _(chờ học viên điền)_ | Product B — LAB-5: break thiết kế LAB-4 thành backlog trên GitHub Project, ước lượng SWP + giờ, báo cáo tiến độ 1 sprint giả lập |
+| Yuki Cold Chain WMS/TMS (hệ thống kho lạnh và vận tải, khách hư cấu) | B123772 | Product B — LAB-5: break thiết kế LAB-4 thành backlog trên GitHub Project, ước lượng SWP + giờ, báo cáo tiến độ 1 sprint giả lập |
 
 > Toàn bộ nội dung do học viên tự viết cho khoá học. Khách hàng, dữ liệu và tình huống đều là giả lập. Repo không chép RFP, không có dữ liệu thật, dữ liệu cá nhân hay khoá bí mật.
 
