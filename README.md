@@ -23,7 +23,7 @@
 | Repo | [https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog) |
 | GitHub Project | [https://github.com/users/nguhdd-3772/projects/1](https://github.com/users/nguhdd-3772/projects/1), có 4 view: Backlog · Sprint 1 · Giờ lái 2024 · Lịch sprint |
 | Báo cáo HTML chấm SWP | File: [reports/estimate-swp-yuki-cold-chain-backlog-p2-20261114.html](./reports/estimate-swp-yuki-cold-chain-backlog-p2-20261114.html) · xem trực tuyến: [GitHub Pages](https://nguhdd-3772.github.io/yuki-cold-chain-lab5-backlog/reports/estimate-swp-yuki-cold-chain-backlog-p2-20261114.html) |
-| Kiểm tra truy cập công khai | Repo, Project và trang Pages đã kiểm bằng request không đăng nhập (HTTP 200) ngày 2026-11-14. _Mở thử bằng cửa sổ ẩn danh: chờ học viên xác nhận._ |
+| Kiểm tra truy cập công khai | Repo, Project và trang Pages đã mở thử bằng **cửa sổ ẩn danh** (không đăng nhập), xem được đầy đủ — 2026-11-14. Kiểm thêm bằng request không đăng nhập: cả 4 link trả HTTP 200. |
 
 ## 3. Cấu trúc repo
 
