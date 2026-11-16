@@ -21,11 +21,11 @@ STATUS_NOTE = {"Done": "Đã review, đóng issue", "In review": "Code xong, ch�
                "In progress": "Mang sang Sprint 2 (giờ còn lại ở bảng dưới)", "Blocked": "Chờ khách trả lời"}
 COMMON_WHY = "LAB-1 làm tròn lên MD theo từng vai trò của mỗi task + buffer 15%; LAB-5 ước giờ từng việc lá đã có spec, buffer để ở dự phòng M.*"
 WHY_LAB1 = {
-    "E01": "Chung (*). LAB-4 gộp mã lỗi / phân quyền / audit thành quy ước chung; thêm khung chính sách có phiên bản",
+    "E01": "Chung (*). LAB-4 gộp mã lỗi / phân quyền / audit thành quy ước chung; thêm khung chính sách có phiên bản; phân quyền × dải nhiệt 4 sub-issue E01-03 theo PREMISE S6",
     "E02": "Chung (*). Prototype LAB-2 đã có màn hình kiểm nhập + quy tắc nhiệt độ nhập (96 dòng); LAB-5 sửa theo gap",
     "E03": "Chung (*). Phạm vi rõ sau S-IV-04: 1 bảng chuyển trạng thái + 1 màn hình",
     "E04": "Prototype đã có allocation-rules-engine (117 dòng) + 10 unit test; LAB-1 tính QA 11 MD, LAB-5 còn 2 issue test (30h)",
-    "E05": "Chung (*). Adapter bản đồ tách thành interface + bản giả cho test, nhà cung cấp thật 1 issue",
+    "E05": "Chung (*). Adapter bản đồ tách thành interface + bản giả cho test, nhà cung cấp thật 1 issue; thêm publish song song → 409 (E05-06, +7h) theo PREMISE S3",
     "E06": "Cao hơn: thêm 4 ngưỡng kỳ (G-31), gợi ý chèn nghỉ (PREMISE S1), spike luật, seed nhiều ngày; prototype chỉ kiểm theo ngày",
     "E07": "Chung (*). POD offline tách 4 sub-issue; bằng chứng theo hợp đồng chờ Q1",
     "E08": "Prototype đã có quy tắc nhiệt độ + nhập CSV logger; LAB-5 sửa định nghĩa duration_min / SLA (gap) và làm case sai lệch",

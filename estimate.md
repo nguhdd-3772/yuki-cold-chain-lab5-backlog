@@ -96,11 +96,11 @@ LAB-1 ước cả dự án là **1.424 MD**. Backlog LAB-5 thay **722 MD** trong
 
 | Phần | LAB-1 | LAB-5 | Chênh | Vì sao |
 |---|---|---|---|---|
-| [#1](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/1) E01 | 29 MD | 22.1 MD | -6.9 MD | Chung (*). LAB-4 gộp mã lỗi / phân quyền / audit thành quy ước chung; thêm khung chính sách có phiên bản |
+| [#1](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/1) E01 | 29 MD | 22.1 MD | -6.9 MD | Chung (*). LAB-4 gộp mã lỗi / phân quyền / audit thành quy ước chung; thêm khung chính sách có phiên bản; phân quyền × dải nhiệt 4 sub-issue E01-03 theo PREMISE S6 |
 | [#22](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/22) E02 | 17 MD | 13.6 MD | -3.4 MD | Chung (*). Prototype LAB-2 đã có màn hình kiểm nhập + quy tắc nhiệt độ nhập (96 dòng); LAB-5 sửa theo gap |
 | [#35](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/35) E03 | 10 MD | 8.0 MD | -2.0 MD | Chung (*). Phạm vi rõ sau S-IV-04: 1 bảng chuyển trạng thái + 1 màn hình |
 | [#42](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/42) E04 | 41 MD | 20.4 MD | -20.6 MD | Prototype đã có allocation-rules-engine (117 dòng) + 10 unit test; LAB-1 tính QA 11 MD, LAB-5 còn 2 issue test (30h) |
-| [#57](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/57) E05 | 26 MD | 20.8 MD | -5.2 MD | Chung (*). Adapter bản đồ tách thành interface + bản giả cho test, nhà cung cấp thật 1 issue |
+| [#57](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/57) E05 | 26 MD | 20.8 MD | -5.2 MD | Chung (*). Adapter bản đồ tách thành interface + bản giả cho test, nhà cung cấp thật 1 issue; thêm publish song song → 409 (E05-06, +7h) theo PREMISE S3 |
 | [#74](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/74) E06 | 34 MD | 34.9 MD | +0.9 MD | Cao hơn: thêm 4 ngưỡng kỳ (G-31), gợi ý chèn nghỉ (PREMISE S1), spike luật, seed nhiều ngày; prototype chỉ kiểm theo ngày |
 | [#101](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/101) E07 | 28 MD | 22.0 MD | -6.0 MD | Chung (*). POD offline tách 4 sub-issue; bằng chứng theo hợp đồng chờ Q1 |
 | [#118](https://github.com/nguhdd-3772/yuki-cold-chain-lab5-backlog/issues/118) E08 | 38 MD | 18.0 MD | -20.0 MD | Prototype đã có quy tắc nhiệt độ + nhập CSV logger; LAB-5 sửa định nghĩa duration_min / SLA (gap) và làm case sai lệch |

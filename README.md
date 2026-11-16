@@ -39,6 +39,7 @@
 | `scripts/` | Bản copy các script đã dùng: sinh issue / field, tạo view, ghi SWP, giả lập sprint, render md. Chạy trong thư mục làm việc gốc của học viên (cần WBS LAB-1); để trong repo cho người đọc audit cách ra số |
 | `data/` | File nguồn duy nhất của backlog (`backlog-source.yaml`), kịch bản Sprint 1 (`sprint-1-simulation.yaml`), nhật ký dùng AI theo từng bước (`ai-usage-log.md`) |
 | `index.html` | Trang mở đầu của GitHub Pages, trỏ tới báo cáo HTML |
+| `.gitignore` | Bỏ qua file tạm (`__pycache__`, `.DS_Store`) |
 
 ## 4. Spec → epic
 
